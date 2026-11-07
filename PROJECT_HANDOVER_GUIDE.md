@@ -361,3 +361,4 @@ To prove that all endpoints, math formulas, and comparisons work with 100% preci
 ---
 
 *Congratulations! You now have full mastery of the Community Climate Vulnerability Mapping Platform.*
+
