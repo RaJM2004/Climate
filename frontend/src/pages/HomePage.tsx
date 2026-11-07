@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   MapContainer,
@@ -49,8 +49,49 @@ export const HomePage: React.FC = () => {
   const [geoJsonData, setGeoJsonData] = useState<any | null>(null);
   const [activeLayer, setActiveLayer] = useState<string>('vulnerability');
   const [selectedDistrict, setSelectedDistrict] = useState<any | null>(null);
-  const [heatmapHover, setHeatmapHover] = useState<{ name: string; score: number; tier: string } | null>(null);
+  const [heatmapHover, setHeatmapHover] = useState<{ name: string; score: number; tier: string; desc?: string } | null>(null);
+  const [heatmapMode, setHeatmapMode] = useState<'vulnerability' | 'thermal' | 'flood'>('vulnerability');
   const [loading, setLoading] = useState<boolean>(true);
+
+  const regionalHeatData = useMemo(() => {
+    switch (heatmapMode) {
+      case 'thermal':
+        return [
+          { id: 'thar', name: 'Thar Arid Margin (Rajasthan)', score: 91.5, tier: 'Very High', color: '#DC2626', desc: '48.2°C Extreme Heatwave Stress' },
+          { id: 'deccan', name: 'Deccan Rain-Shadow (Telangana)', score: 74.0, tier: 'High', color: '#EA580C', desc: 'Prolonged High Heat Index' },
+          { id: 'ganga', name: 'Gangetic Basin (Bihar/UP)', score: 68.2, tier: 'High', color: '#F59E0B', desc: 'High Wet-Bulb Humidity Anomalies' },
+          { id: 'east', name: 'East Coastal Belt (Odisha/AP)', score: 62.5, tier: 'High', color: '#F59E0B', desc: 'Coastal Thermal Stagnation' },
+          { id: 'central', name: 'Central Plateau (MP/JH)', score: 58.0, tier: 'Moderate', color: '#FACC15', desc: 'Seasonal Heat Spikes' },
+          { id: 'west', name: 'Western Ghats (MH/KL)', score: 36.5, tier: 'Low', color: '#86EFAC', desc: 'Orographic Heat Moderation' },
+          { id: 'northeast', name: 'Northeast Hills (Assam)', score: 28.0, tier: 'Low', color: '#4ADE80', desc: 'Subtropical Humid Baseline' },
+          { id: 'north', name: 'Northern Highlands (J&K/HP)', score: 14.5, tier: 'Very Low', color: '#22C55E', desc: 'Temperate Montane Buffer' },
+        ];
+      case 'flood':
+        return [
+          { id: 'east', name: 'East Coast Littoral (Odisha/WB)', score: 94.2, tier: 'Very High', color: '#DC2626', desc: 'Severe Surge & River Overflow' },
+          { id: 'west', name: 'Western Ghats Belt (Wayanad/KL)', score: 86.8, tier: 'Very High', color: '#EF4444', desc: 'Flash Inundation & Debris Flow' },
+          { id: 'ganga', name: 'Gangetic Basin (Bihar/East UP)', score: 79.4, tier: 'High', color: '#EA580C', desc: 'Kosi/Ganga Floodplain Swell' },
+          { id: 'northeast', name: 'Northeast Mountain Arc (Assam)', score: 72.1, tier: 'High', color: '#F97316', desc: 'Brahmaputra Flood Plain' },
+          { id: 'central', name: 'Central Mineral Plateau (MP/JH)', score: 44.0, tier: 'Moderate', color: '#FACC15', desc: 'Catchment River Swell' },
+          { id: 'deccan', name: 'Deccan Plateau (Telangana)', score: 38.5, tier: 'Low', color: '#86EFAC', desc: 'Sub-catchment Drainage' },
+          { id: 'north', name: 'Northern Highlands (J&K/HP)', score: 31.0, tier: 'Low', color: '#4ADE80', desc: 'Glacial Runoff Channels' },
+          { id: 'thar', name: 'Thar Arid Margin (Rajasthan)', score: 12.0, tier: 'Very Low', color: '#22C55E', desc: 'Arid Low Inundation Risk' },
+        ];
+      default: // vulnerability composite
+        return [
+          { id: 'east', name: 'East Coast Delta (Odisha/WB)', score: 87.4, tier: 'Very High', color: '#DC2626', desc: 'Cyclone Surge + Kutcha Housing' },
+          { id: 'thar', name: 'Thar Desert Belt (Rajasthan)', score: 82.0, tier: 'Very High', color: '#EA580C', desc: 'SPI Drought + Water Deficit' },
+          { id: 'west', name: 'Western Ghats (Wayanad/MH)', score: 76.5, tier: 'High', color: '#F97316', desc: 'Heavy Rain + Fragile Roads' },
+          { id: 'ganga', name: 'Gangetic Basin (Bihar/UP)', score: 71.8, tier: 'High', color: '#FB923C', desc: 'High Density + Flood Inundation' },
+          { id: 'central', name: 'Central Mineral Plateau (MP/JH)', score: 56.4, tier: 'Moderate', color: '#FACC15', desc: 'Rain-fed Agriculture Dependency' },
+          { id: 'deccan', name: 'Deccan Rain-Shadow (Telangana)', score: 48.2, tier: 'Moderate', color: '#FDE047', desc: 'Groundwater Stress + Resilience' },
+          { id: 'northeast', name: 'Northeast Mountain Arc', score: 34.0, tier: 'Low', color: '#86EFAC', desc: 'Forest Buffer + Low Density' },
+          { id: 'north', name: 'Northern Highlands (J&K/HP)', score: 21.5, tier: 'Low', color: '#22C55E', desc: 'Low Exposure Baseline' },
+        ];
+    }
+  }, [heatmapMode]);
+
+  const regionMap = useMemo(() => new Map(regionalHeatData.map((r) => [r.id, r])), [regionalHeatData]);
 
   useEffect(() => {
     Promise.all([
@@ -541,203 +582,250 @@ export const HomePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Box 2: Territorial Risk Heatmap (Choropleth Graphic - matching Image 1) */}
+        {/* Box 2: Territorial Risk Heatmap (Actual India Geographic Heatmap with Real Thermal Hotspots) */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-1">
-            <div>
-              <h3 className="text-xs font-bold text-slate-800 m-0 flex items-center space-x-1.5">
-                <Flame className="w-3.5 h-3.5 text-rose-500" />
-                <span>Territorial Risk Heatmap</span>
-              </h3>
-              <div className="text-[10px] text-slate-400">Regional Sensitivity & Hazard Density</div>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <div>
+                <h3 className="text-xs font-bold text-slate-800 m-0 flex items-center space-x-1.5">
+                  <Flame className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Territorial Risk Heatmap</span>
+                </h3>
+                <div className="text-[10px] text-slate-400">Regional Sensitivity & Hazard Density</div>
+              </div>
+              <span onClick={() => navigate('/map')} className="text-[10px] text-teal-700 font-semibold cursor-pointer hover:underline">
+                View details
+              </span>
             </div>
-            <span onClick={() => navigate('/map')} className="text-[10px] text-teal-700 font-semibold cursor-pointer hover:underline">
-              View details
-            </span>
+
+            {/* Quick Dimension Pill Selectors: Risk | Thermal | Flood */}
+            <div className="flex items-center space-x-1 bg-slate-100 p-0.5 rounded-lg mb-2 text-[10px] font-semibold">
+              <button
+                type="button"
+                onClick={() => setHeatmapMode('vulnerability')}
+                className={`flex-1 py-0.5 rounded transition ${
+                  heatmapMode === 'vulnerability' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Risk Composite
+              </button>
+              <button
+                type="button"
+                onClick={() => setHeatmapMode('thermal')}
+                className={`flex-1 py-0.5 rounded transition ${
+                  heatmapMode === 'thermal' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Heatwave
+              </button>
+              <button
+                type="button"
+                onClick={() => setHeatmapMode('flood')}
+                className={`flex-1 py-0.5 rounded transition ${
+                  heatmapMode === 'flood' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Flood / Surge
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between my-2 gap-2">
-            {/* Detailed Vector Choropleth Regional Map matching Reference Image 1 */}
-            <div className="w-36 h-32 relative flex flex-col items-center justify-center">
-              <svg viewBox="0 0 140 130" className="w-full h-full drop-shadow-xs">
-                {/* Authentic Contiguous District Polygons with sharp borders and risk colors */}
-                {/* North Green Polygons (Very Low / Low Risk) */}
+          {/* Geographic Heatmap Vector Canvas + Continuous Gradient Legend */}
+          <div className="flex items-center justify-between my-1 gap-2">
+            {/* Realistic India Vector Silhouette with Thermal Dispersion Layers */}
+            <div className="w-36 h-36 relative flex items-center justify-center shrink-0">
+              <svg viewBox="0 0 170 185" className="w-full h-full drop-shadow-xs select-none">
+                <defs>
+                  {/* Gaussian blur filter for scientific thermal dispersion */}
+                  <filter id="thermal-blur" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="4.5" result="blur" />
+                  </filter>
+
+                  {/* Hotspot radial gradients for smooth thermal dispersion */}
+                  <radialGradient id="grad-east" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#DC2626" stopOpacity="0.85" />
+                    <stop offset="45%" stopColor="#EA580C" stopOpacity="0.6" />
+                    <stop offset="75%" stopColor="#FACC15" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#FACC15" stopOpacity="0" />
+                  </radialGradient>
+                  <radialGradient id="grad-thar" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#EA580C" stopOpacity="0.85" />
+                    <stop offset="45%" stopColor="#F97316" stopOpacity="0.6" />
+                    <stop offset="75%" stopColor="#FACC15" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#FACC15" stopOpacity="0" />
+                  </radialGradient>
+                  <radialGradient id="grad-west" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#EF4444" stopOpacity="0.8" />
+                    <stop offset="50%" stopColor="#FB923C" stopOpacity="0.5" />
+                    <stop offset="100%" stopColor="#FDE047" stopOpacity="0" />
+                  </radialGradient>
+                  <radialGradient id="grad-ganga" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.8" />
+                    <stop offset="50%" stopColor="#FBBF24" stopOpacity="0.5" />
+                    <stop offset="100%" stopColor="#A3E635" stopOpacity="0" />
+                  </radialGradient>
+                </defs>
+
+                {/* Background Silhouette of India Boundary */}
                 <path
-                  d="M48,6 L72,8 L76,26 L54,28 L40,18 Z"
-                  fill="#22C55E"
-                  stroke="#FFFFFF"
-                  strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'North Highlands', score: 18, tier: 'Very Low' })}
-                  onMouseLeave={() => setHeatmapHover(null)}
+                  d="M65,12 L74,5 L83,7 L91,16 L89,32 L108,44 L114,58 L122,38 L138,36 L145,44 L140,60 L128,68 L116,64 L116,76 L108,96 L96,120 L88,126 L84,152 L75,168 L66,154 L58,134 L50,112 L46,88 L38,94 L26,88 L34,82 L26,75 L32,60 L44,46 L58,32 Z"
+                  fill="#F8FAFC"
+                  stroke="#CBD5E1"
+                  strokeWidth="2.5"
+                  strokeLinejoin="round"
                 />
+
+                {/* Contiguous Regional Geographic Parcels with Color Spectrum */}
+                {/* 1. North Highlands (J&K, HP, Ladakh, Uttarakhand) */}
                 <path
-                  d="M72,8 L96,14 L102,30 L76,26 Z"
-                  fill="#86EFAC"
+                  d="M65,12 L74,5 L83,7 L91,16 L89,32 L79,34 L58,32 Z"
+                  fill={regionMap.get('north')?.color || '#22C55E'}
                   stroke="#FFFFFF"
                   strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'Eastern Slopes', score: 28, tier: 'Low' })}
-                  onMouseLeave={() => setHeatmapHover(null)}
-                />
-                <path
-                  d="M40,18 L54,28 L48,46 L32,42 L26,28 Z"
-                  fill="#4ADE80"
-                  stroke="#FFFFFF"
-                  strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'Upper Valley', score: 24, tier: 'Low' })}
-                  onMouseLeave={() => setHeatmapHover(null)}
-                />
-                <path
-                  d="M54,28 L78,32 L74,52 L48,46 Z"
-                  fill="#A3E635"
-                  stroke="#FFFFFF"
-                  strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'Central Piedmont', score: 38, tier: 'Low' })}
-                  onMouseLeave={() => setHeatmapHover(null)}
-                />
-                <path
-                  d="M78,32 L102,30 L110,48 L84,54 L74,52 Z"
-                  fill="#FDE047"
-                  stroke="#FFFFFF"
-                  strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'River Confluence', score: 45, tier: 'Moderate' })}
+                  className="hover:brightness-110 cursor-pointer transition-all duration-150"
+                  onMouseEnter={() => setHeatmapHover(regionMap.get('north') || null)}
                   onMouseLeave={() => setHeatmapHover(null)}
                 />
 
-                {/* Central Yellow & Orange Polygons (Moderate / High Risk) */}
+                {/* 2. Thar Arid Margin (Western Rajasthan, Punjab, Kutch) */}
                 <path
-                  d="M32,42 L48,46 L42,66 L22,60 Z"
-                  fill="#FACC15"
+                  d="M58,32 L44,46 L32,60 L26,75 L34,82 L26,88 L38,94 L46,88 L58,62 Z"
+                  fill={regionMap.get('thar')?.color || '#EA580C'}
                   stroke="#FFFFFF"
                   strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'Western Foothills', score: 52, tier: 'Moderate' })}
-                  onMouseLeave={() => setHeatmapHover(null)}
-                />
-                <path
-                  d="M48,46 L74,52 L70,72 L42,66 Z"
-                  fill="#FB923C"
-                  stroke="#FFFFFF"
-                  strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'Agricultural Corridor', score: 64, tier: 'High' })}
-                  onMouseLeave={() => setHeatmapHover(null)}
-                />
-                <path
-                  d="M74,52 L84,54 L94,70 L70,72 Z"
-                  fill="#F97316"
-                  stroke="#FFFFFF"
-                  strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'Central Plateau', score: 68, tier: 'High' })}
-                  onMouseLeave={() => setHeatmapHover(null)}
-                />
-                <path
-                  d="M84,54 L110,48 L118,66 L94,70 Z"
-                  fill="#FB923C"
-                  stroke="#FFFFFF"
-                  strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'Eastern Basin', score: 62, tier: 'High' })}
+                  className="hover:brightness-110 cursor-pointer transition-all duration-150"
+                  onMouseEnter={() => setHeatmapHover(regionMap.get('thar') || null)}
                   onMouseLeave={() => setHeatmapHover(null)}
                 />
 
-                {/* South & Coastal High Risk Red Polygons (High / Very High Risk) */}
+                {/* 3. Indo-Gangetic Basin (Haryana, UP, Bihar) */}
                 <path
-                  d="M22,60 L42,66 L36,90 L18,80 Z"
-                  fill="#EA580C"
+                  d="M58,32 L79,34 L89,32 L108,44 L114,58 L110,74 L74,68 L58,62 Z"
+                  fill={regionMap.get('ganga')?.color || '#FB923C'}
                   stroke="#FFFFFF"
                   strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'Coastal Escarpment', score: 72, tier: 'High' })}
+                  className="hover:brightness-110 cursor-pointer transition-all duration-150"
+                  onMouseEnter={() => setHeatmapHover(regionMap.get('ganga') || null)}
                   onMouseLeave={() => setHeatmapHover(null)}
                 />
+
+                {/* 4. Central Mineral Plateau (Madhya Pradesh, Chhattisgarh, Jharkhand) */}
                 <path
-                  d="M42,66 L70,72 L64,94 L36,90 Z"
-                  fill="#EF4444"
+                  d="M58,62 L74,68 L110,74 L98,94 L78,96 L54,94 L46,88 Z"
+                  fill={regionMap.get('central')?.color || '#FACC15'}
                   stroke="#FFFFFF"
                   strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'South Floodplain', score: 81, tier: 'Very High' })}
+                  className="hover:brightness-110 cursor-pointer transition-all duration-150"
+                  onMouseEnter={() => setHeatmapHover(regionMap.get('central') || null)}
                   onMouseLeave={() => setHeatmapHover(null)}
                 />
+
+                {/* 5. East Coastal Littoral & Delta (Odisha, Coastal AP, West Bengal Delta) */}
                 <path
-                  d="M70,72 L94,70 L90,92 L64,94 Z"
-                  fill="#DC2626"
+                  d="M110,74 L116,76 L108,96 L96,120 L88,126 L82,104 L98,94 Z"
+                  fill={regionMap.get('east')?.color || '#DC2626'}
                   stroke="#FFFFFF"
                   strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'Southern Delta', score: 87, tier: 'Very High' })}
+                  className="hover:brightness-110 cursor-pointer transition-all duration-150"
+                  onMouseEnter={() => setHeatmapHover(regionMap.get('east') || null)}
                   onMouseLeave={() => setHeatmapHover(null)}
                 />
+
+                {/* 6. Western Ghats Highland & Malabar (Konkan, Goa, Coastal Karnataka, Kerala) */}
                 <path
-                  d="M94,70 L118,66 L112,88 L90,92 Z"
-                  fill="#B91C1C"
+                  d="M46,88 L54,94 L50,112 L58,138 L68,160 L75,168 L66,154 L58,134 L52,114 Z"
+                  fill={regionMap.get('west')?.color || '#F97316'}
                   stroke="#FFFFFF"
                   strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'Maritime Front', score: 89, tier: 'Very High' })}
+                  className="hover:brightness-110 cursor-pointer transition-all duration-150"
+                  onMouseEnter={() => setHeatmapHover(regionMap.get('west') || null)}
                   onMouseLeave={() => setHeatmapHover(null)}
                 />
+
+                {/* 7. Deccan Rain-Shadow & Southern Plateau (Telangana, Rayalaseema, TN) */}
                 <path
-                  d="M36,90 L64,94 L58,116 L30,108 Z"
-                  fill="#DC2626"
+                  d="M78,96 L82,104 L88,126 L84,152 L75,168 L68,160 L58,134 L78,96 Z"
+                  fill={regionMap.get('deccan')?.color || '#FDE047'}
                   stroke="#FFFFFF"
                   strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'Estuary Wetlands', score: 85, tier: 'Very High' })}
+                  className="hover:brightness-110 cursor-pointer transition-all duration-150"
+                  onMouseEnter={() => setHeatmapHover(regionMap.get('deccan') || null)}
                   onMouseLeave={() => setHeatmapHover(null)}
                 />
+
+                {/* 8. Northeast Mountain Arc (Assam, Meghalaya, Arunachal) */}
                 <path
-                  d="M64,94 L90,92 L84,114 L58,116 Z"
-                  fill="#991B1B"
+                  d="M114,58 L122,38 L138,36 L145,44 L140,60 L128,68 L116,64 Z"
+                  fill={regionMap.get('northeast')?.color || '#86EFAC'}
                   stroke="#FFFFFF"
                   strokeWidth="1.2"
-                  className="hover:opacity-85 transition cursor-pointer"
-                  onMouseEnter={() => setHeatmapHover({ name: 'Cyclone Littoral', score: 94, tier: 'Very High' })}
+                  className="hover:brightness-110 cursor-pointer transition-all duration-150"
+                  onMouseEnter={() => setHeatmapHover(regionMap.get('northeast') || null)}
                   onMouseLeave={() => setHeatmapHover(null)}
                 />
+
+                {/* Thermal Gaussian Dispersion Heatmap Layer */}
+                <g filter="url(#thermal-blur)" opacity="0.65" style={{ pointerEvents: 'none' }}>
+                  {/* East Coast Hazard Epicenter */}
+                  <ellipse cx="102" cy="94" rx="14" ry="18" fill="url(#grad-east)" />
+                  {/* Thar Arid Hotspot */}
+                  <circle cx="42" cy="62" r="15" fill="url(#grad-thar)" />
+                  {/* Western Ghats High Precipitation Hotspot */}
+                  <ellipse cx="58" cy="132" rx="9" ry="16" fill="url(#grad-west)" />
+                  {/* Gangetic Inundation Hotspot */}
+                  <ellipse cx="86" cy="54" rx="16" ry="8" fill="url(#grad-ganga)" />
+                </g>
+
+                {/* Live Sensor Hotspot Indicator Rings */}
+                <g style={{ pointerEvents: 'none' }}>
+                  {/* East Coast Hotspot Pin */}
+                  <circle cx="104" cy="94" r="3" fill="#DC2626" stroke="#FFFFFF" strokeWidth="1" />
+                  <circle cx="104" cy="94" r="6" fill="none" stroke="#DC2626" strokeWidth="1" opacity="0.7" className="animate-ping" />
+
+                  {/* Thar Hotspot Pin */}
+                  <circle cx="40" cy="64" r="3" fill="#EA580C" stroke="#FFFFFF" strokeWidth="1" />
+                </g>
               </svg>
             </div>
 
-            <div className="space-y-1.5 text-[10px] text-slate-600 font-medium shrink-0">
-              <div className="flex items-center space-x-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#DC2626] shadow-xs"></span>
-                <span>Very High</span>
+            {/* Right: Thermal Spectrum Continuous Gradient Legend + Peak Stats */}
+            <div className="flex flex-col justify-between h-36 py-1 pl-1 text-[10px] shrink-0 border-l border-slate-100">
+              <div className="space-y-1">
+                <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Hazard Scale</div>
+                <div className="flex items-center space-x-1.5">
+                  {/* Vertical Continuous Gradient Bar */}
+                  <div className="w-2.5 h-20 rounded-full bg-gradient-to-t from-[#22C55E] via-[#FACC15] via-[#FB923C] to-[#DC2626] shadow-2xs border border-slate-200"></div>
+                  <div className="flex flex-col justify-between h-20 text-[9px] text-slate-600 font-medium leading-tight">
+                    <span className="font-bold text-red-600">Critical (&gt;80)</span>
+                    <span className="text-orange-600">High (60-80)</span>
+                    <span className="text-amber-600">Mod (40-60)</span>
+                    <span className="text-emerald-700">Low (&lt;40)</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#EA580C] shadow-xs"></span>
-                <span>High</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#FACC15] shadow-xs"></span>
-                <span>Moderate</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#86EFAC] shadow-xs"></span>
-                <span>Low</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#22C55E] shadow-xs"></span>
-                <span>Very Low</span>
+
+              <div className="pt-1.5 border-t border-slate-100 text-[9px]">
+                <div className="text-slate-400">Peak Hotspot</div>
+                <div className="font-bold text-rose-600 font-mono">
+                  {heatmapMode === 'thermal' ? 'Thar: 91.5' : heatmapMode === 'flood' ? 'Odisha: 94.2' : 'East Coast: 87.4'}
+                </div>
               </div>
             </div>
           </div>
 
           {/* Interactive Hover Micro-Banner */}
-          <div className="text-[10px] text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 flex items-center justify-between">
+          <div className="text-[10px] text-slate-500 bg-slate-50/90 px-2.5 py-1.5 rounded-lg border border-slate-200/80 flex items-center justify-between mt-1">
             {heatmapHover ? (
-              <span className="font-semibold text-slate-800">
-                {heatmapHover.name}: <span className="text-teal-700 font-mono font-bold">{heatmapHover.score}/100</span> ({heatmapHover.tier})
-              </span>
+              <div className="truncate pr-1">
+                <span className="font-bold text-slate-800">{heatmapHover.name}: </span>
+                <span className="text-teal-700 font-mono font-bold">{heatmapHover.score}/100</span>{' '}
+                <span className="text-slate-500">({heatmapHover.tier})</span>
+                {heatmapHover.desc && <span className="text-[9px] text-slate-400 block truncate leading-tight">{heatmapHover.desc}</span>}
+              </div>
             ) : (
-              <span className="text-slate-400">Hover district parcel to inspect score</span>
+              <span className="text-slate-400 truncate">Hover India geographic zone to inspect hazard density</span>
             )}
-            <ChevronRight className="w-3 h-3 text-slate-400" />
+            <ChevronRight className="w-3 h-3 text-slate-400 shrink-0" />
           </div>
         </div>
 
